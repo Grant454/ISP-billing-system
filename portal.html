@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NetBill — Get Internet</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f9;--surf:#fff;--brd:#dde4ef;
+  --accent:#1a73e8;--green:#16a34a;--red:#dc2626;--amber:#d97706;
+  --txt:#0f1923;--sub:#64748b;--mono:'IBM Plex Mono',monospace;
+  --sans:'Plus Jakarta Sans',sans-serif;
+}
+html,body{min-height:100%;font-family:var(--sans);background:var(--bg);color:var(--txt)}
+body{display:flex;flex-direction:column;align-items:center;padding:0 16px 40px}
+
+/* NAV */
+.topbar{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;padding:20px 0 16px}
+.brand{font-weight:800;font-size:20px;letter-spacing:-.5px}
+.brand span{color:var(--accent)}
+.ip-chip{font-family:var(--mono);font-size:11px;background:var(--brd);padding:4px 10px;border-radius:20px;color:var(--sub)}
+
+/* CARD */
+.card{background:var(--surf);border:1px solid var(--brd);border-radius:16px;padding:24px;width:100%;max-width:520px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card-title{font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--sub);margin-bottom:16px}
+
+/* PLAN GRID */
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:420px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{border:2px solid var(--brd);border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:.14s;user-select:none;position:relative;background:var(--surf)}
+.plan:hover{border-color:var(--accent);background:#f5f9ff}
+.plan.sel{border-color:var(--accent);background:#eef3ff}
+.plan.sel::after{content:'✓';position:absolute;top:6px;right:8px;font-size:10px;color:var(--accent);font-weight:800}
+.plan-name{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px}
+.plan-price{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--accent);margin-bottom:2px}
+.plan-speed{font-size:10px;color:var(--sub)}
+
+/* FORM */
+.fr{margin-bottom:14px}
+.fr label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px}
+.fr input{width:100%;border:1.5px solid var(--brd);border-radius:8px;padding:11px 13px;font-family:var(--sans);font-size:14px;outline:none;transition:border-color .14s;background:var(--surf)}
+.fr input:focus{border-color:var(--accent)}
+.hint{font-size:11px;color:var(--sub);margin-top:4px}
+
+/* BUTTON */
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:.14s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.98)}
+.btn-pay{background:var(--accent);color:#fff;margin-top:6px}
+.btn-pay:hover{background:#1558c0}
+.btn-pay:disabled{background:var(--brd);color:var(--sub);cursor:not-allowed}
+.btn-vouch{background:#f1f5fd;color:var(--accent);border:1.5px solid #c7d9fa;font-size:13px;padding:11px}
+.btn-vouch:hover{background:#e4ecfb}
+
+/* STATUS SCREEN */
+#status-screen{display:none}
+.status-icon{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.si-pending{background:#fef9ec;border:2px solid #fcd34d}
+.si-active{background:#f0fdf4;border:2px solid #4ade80}
+.si-failed{background:#fef2f2;border:2px solid #fca5a5}
+.status-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:6px}
+.status-sub{font-size:13px;color:var(--sub);text-align:center;line-height:1.6;margin-bottom:20px}
+.progress-bar{height:6px;background:var(--brd);border-radius:3px;overflow:hidden;margin-bottom:20px}
+.progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s ease}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.detail-item{background:var(--bg);border-radius:10px;padding:12px}
+.detail-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--sub);margin-bottom:3px}
+.detail-val{font-family:var(--mono);font-size:14px;font-weight:500}
+.timer{font-family:var(--mono);font-size:32px;font-weight:600;text-align:center;color:var(--green);margin-bottom:6px}
+.timer.exp{color:var(--red)}
+.timer-label{font-size:11px;color:var(--sub);text-align:center;margin-bottom:20px}
+
+/* VOUCHER SCREEN */
+#voucher-screen{display:none}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;display:flex;flex-direction:column;gap:8px;align-items:center;width:calc(100% - 32px);max-width:400px}
+.toast{background:#1e293b;color:#fff;border-radius:10px;padding:11px 16px;font-size:13px;font-weight:500;opacity:0;transform:translateY(10px);transition:.22s;text-align:center}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* FOOTER */
+.footer{font-size:11px;color:var(--sub);text-align:center;margin-top:10px;line-height:1.7}
+
+/* SPINNER */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Net<span>Bill</span></div>
+  <div class="ip-chip" id="my-ip">Detecting IP…</div>
+</div>
+
+<!-- ── PLAN SELECTION SCREEN ─────────────────────── -->
+<div id="buy-screen">
+
+  <div class="card">
+    <div class="card-title">Choose a Plan</div>
+    <div class="plans" id="plans-list">
+      <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--sub);font-size:13px">Loading plans…</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Your Details</div>
+    <div class="fr">
+      <label>Full Name</label>
+      <input id="cust-name" type="text" placeholder="e.g. Jane Mwangi"/>
+    </div>
+    <div class="fr">
+      <label>M-Pesa Phone Number</label>
+      <input id="cust-phone" type="tel" placeholder="07XX XXX XXX or +2547XX XXX XXX"/>
+      <div class="hint">You'll receive an M-Pesa prompt on this number to complete payment.</div>
+    </div>
+    <button class="btn btn-pay" id="pay-btn" onclick="initiatePayment()" disabled>
+      Select a plan to continue
+    </button>
+    <div style="margin-top:12px"></div>
+    <button class="btn btn-vouch" onclick="showVoucher()">🎟 I have a voucher code</button>
+  </div>
+
+  <div class="footer" id="isp-footer">Powered by NetBill Pro</div>
+</div>
+
+<!-- ── STATUS SCREEN ──────────────────────────────── -->
+<div id="status-screen">
+  <div class="card" style="text-align:center;padding:30px 24px">
+    <div class="status-icon" id="st-icon">⏳</div>
+    <div class="status-title" id="st-title">Waiting for payment…</div>
+    <div class="status-sub" id="st-sub">Check your phone for the M-Pesa prompt.<br/>Enter your PIN to complete payment.</div>
+    <div class="progress-bar"><div class="progress-fill" id="st-progress" style="width:30%"></div></div>
+    <div class="timer" id="st-timer" style="display:none"></div>
+    <div class="timer-label" id="st-timer-label" style="display:none">remaining</div>
+    <div class="detail-grid" id="st-details" style="display:none">
+      <div class="detail-item"><div class="detail-label">Plan</div><div class="detail-val" id="d-plan">—</div></div>
+      <div class="detail-item"><div class="detail-label">Amount</div><div class="detail-val" id="d-amt">—</div></div>
+      <div class="detail-item"><div class="detail-label">Your IP</div><div class="detail-val" id="d-ip" style="font-size:12px">—</div></div>
+      <div class="detail-item"><div class="detail-label">Expires</div><div class="detail-val" id="d-exp" style="font-size:11px">—</div></div>
+    </div>
+    <button class="btn" style="background:var(--bg);color:var(--sub);font-size:13px;font-weight:600" id="st-back-btn" onclick="backToPlans()" style="display:none">← Buy Again</button>
+  </div>
+  <div class="footer" id="st-footer">Powered by NetBill Pro</div>
+</div>
+
+<!-- ── VOUCHER SCREEN ─────────────────────────────── -->
+<div id="voucher-screen">
+  <div class="card">
+    <div class="card-title">Redeem Voucher</div>
+    <div class="fr">
+      <label>Voucher Code</label>
+      <input id="v-code" type="text" placeholder="e.g. AB3XYZ" style="text-transform:uppercase;letter-spacing:4px;font-family:var(--mono);font-size:18px;text-align:center"/>
+    </div>
+    <div class="fr">
+      <label>Your Name (optional)</label>
+      <input id="v-name" type="text" placeholder="Jane Mwangi"/>
+    </div>
+    <div class="fr">
+      <label>Phone (optional, for SMS)</label>
+      <input id="v-phone" type="tel" placeholder="07XX XXX XXX"/>
+    </div>
+    <button class="btn btn-pay" onclick="redeemVoucher()">🎟 Redeem &amp; Connect</button>
+    <div style="margin-top:12px"></div>
+    <button class="btn btn-vouch" onclick="showBuy()">← Back to Plans</button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG — fill in your values
+// ══════════════════════════════════════════════
+const SUPABASE_URL    = 'https://YOUR_PROJECT.supabase.co'
+const SUPABASE_ANON   = 'YOUR_ANON_KEY'
+const EDGE_FN_URL     = 'https://YOUR_PROJECT.supabase.co/functions/v1/netbill'
+const ISP_NAME        = 'Jamii Fibre'        // shown in UI
+const ISP_SUPPORT     = '+254 700 000 000'   // support number
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+const SB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
+let myIP = null
+let selectedPlan = null
+let currentSessionId = null
+let pollInterval = null
+let timerInterval = null
+
+document.getElementById('isp-footer').textContent = `Powered by ${ISP_NAME}`
+document.getElementById('st-footer').textContent  = `Support: ${ISP_SUPPORT}`
+
+// ── Detect IP via public API ──
+async function detectIP() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json')
+    const d = await r.json()
+    myIP = d.ip
+    document.getElementById('my-ip').textContent = myIP
+    checkExistingSession()
+  } catch {
+    document.getElementById('my-ip').textContent = 'IP unknown'
+  }
+}
+
+// ── Check if this IP already has an active session ──
+async function checkExistingSession() {
+  if (!myIP) return
+  try {
+    const r = await fetch(`${EDGE_FN_URL}/session-status?ip=${myIP}`)
+    const d = await r.json()
+    if (d && d.status === 'active') {
+      currentSessionId = d.id
+      showActiveSession(d)
+    }
+  } catch {}
+}
+
+// ── Load plans from Supabase ──
+async function loadPlans() {
+  const { data, error } = await SB.from('plans').select('*').eq('is_active', true).order('sort_order')
+  if (error || !data?.length) {
+    document.getElementById('plans-list').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#dc2626;font-size:13px">Could not load plans. Check configuration.</div>'
+    return
+  }
+  document.getElementById('plans-list').innerHTML = data.map(p => `
+    <div class="plan" id="plan-${p.id}" onclick="selectPlan('${p.id}','${escHtml(p.name)}',${p.price_ksh},${p.duration_hours})">
+      <div class="plan-name">${escHtml(p.name)}</div>
+      <div class="plan-price">KSh ${Number(p.price_ksh).toFixed(0)}</div>
+      <div class="plan-speed">${p.speed_down_mbps}↓ ${p.speed_up_mbps}↑ Mbps</div>
+    </div>`).join('')
+}
+
+function selectPlan(id, name, price, hours) {
+  selectedPlan = { id, name, price, hours }
+  document.querySelectorAll('.plan').forEach(el => el.classList.remove('sel'))
+  document.getElementById(`plan-${id}`).classList.add('sel')
+  const btn = document.getElementById('pay-btn')
+  btn.textContent = `Pay KSh ${price} for ${name} via M-Pesa`
+  btn.disabled = false
+}
+
+// ── Initiate payment ──
+async function initiatePayment() {
+  if (!selectedPlan) { toast('Please select a plan first'); return }
+  const name  = document.getElementById('cust-name').value.trim() || 'Customer'
+  const phone = document.getElementById('cust-phone').value.trim()
+  if (!phone) { toast('Please enter your M-Pesa phone number'); return }
+  if (!myIP)  { toast('Could not detect your IP address'); return }
+
+  const btn = document.getElementById('pay-btn')
+  btn.disabled = true
+  btn.innerHTML = '<span class="spin"></span> Sending prompt…'
+
+  try {
+    const r = await fetch(`${EDGE_FN_URL}/stk-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, plan_id: selectedPlan.id, ip_address: myIP, customer_name: name })
+    })
+    const d = await r.json()
+
+    if (d.ok) {
+      currentSessionId = d.session_id
+      showPendingScreen()
+      startPolling()
+    } else {
+      toast('❌ ' + (d.error || 'Payment failed. Try again.'))
+      btn.disabled = false
+      btn.textContent = `Pay KSh ${selectedPlan.price} for ${selectedPlan.name} via M-Pesa`
+    }
+  } catch (e) {
+    toast('Connection error. Check your internet.')
+    btn.disabled = false
+    btn.textContent = `Pay KSh ${selectedPlan.price} for ${selectedPlan.name} via M-Pesa`
+  }
+}
+
+// ── Polling for session status ──
+function startPolling() {
+  pollInterval = setInterval(async () => {
+    if (!currentSessionId) return
+    try {
+      const r = await fetch(`${EDGE_FN_URL}/session-status?id=${currentSessionId}`)
+      const d = await r.json()
+      if (d.status === 'active') {
+        clearInterval(pollInterval)
+        showActiveSession(d)
+      } else if (d.status === 'failed') {
+        clearInterval(pollInterval)
+        showFailedScreen()
+      }
+    } catch {}
+  }, 3000)
+
+  // Stop polling after 3 minutes
+  setTimeout(() => {
+    if (pollInterval) {
+      clearInterval(pollInterval)
+      toast('Payment timed out. Try again.')
+      backToPlans()
+    }
+  }, 180000)
+}
+
+// ── Screens ──
+function showPendingScreen() {
+  document.getElementById('buy-screen').style.display = 'none'
+  document.getElementById('status-screen').style.display = 'block'
+  document.getElementById('voucher-screen').style.display = 'none'
+  document.getElementById('st-icon').innerHTML = '⏳'
+  document.getElementById('st-icon').className = 'status-icon si-pending'
+  document.getElementById('st-title').textContent = 'Waiting for payment…'
+  document.getElementById('st-sub').innerHTML = `<strong>Check your phone (${document.getElementById('cust-phone').value.trim()}) for the M-Pesa prompt.</strong><br/>Enter your PIN to complete payment.`
+  document.getElementById('st-progress').style.width = '40%'
+  document.getElementById('st-timer').style.display = 'none'
+  document.getElementById('st-timer-label').style.display = 'none'
+  document.getElementById('st-details').style.display = 'none'
+  document.getElementById('st-back-btn').style.display = 'none'
+}
+
+function showActiveSession(session) {
+  clearInterval(pollInterval)
+  document.getElementById('buy-screen').style.display = 'none'
+  document.getElementById('status-screen').style.display = 'block'
+  document.getElementById('voucher-screen').style.display = 'none'
+
+  document.getElementById('st-icon').innerHTML = '✅'
+  document.getElementById('st-icon').className = 'status-icon si-active'
+  document.getElementById('st-title').textContent = 'You are connected!'
+  document.getElementById('st-sub').textContent = 'Enjoy your internet. Your session will automatically disconnect when time is up.'
+  document.getElementById('st-progress').style.width = '100%'
+  document.getElementById('st-progress').style.background = 'var(--green)'
+  document.getElementById('st-timer').style.display = 'block'
+  document.getElementById('st-timer-label').style.display = 'block'
+  document.getElementById('st-details').style.display = 'grid'
+  document.getElementById('st-back-btn').style.display = 'flex'
+
+  document.getElementById('d-plan').textContent = session.plan_name || '—'
+  document.getElementById('d-amt').textContent  = session.amount_ksh ? `KSh ${Number(session.amount_ksh).toFixed(0)}` : '—'
+  document.getElementById('d-ip').textContent   = session.ip_address || myIP || '—'
+  document.getElementById('d-exp').textContent  = session.expires_at ? new Date(session.expires_at).toLocaleString('en-KE',{timeZone:'Africa/Nairobi',hour12:true,month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'
+
+  // Countdown timer
+  if (session.expires_at) startCountdown(new Date(session.expires_at))
+}
+
+function showFailedScreen() {
+  document.getElementById('st-icon').innerHTML = '❌'
+  document.getElementById('st-icon').className = 'status-icon si-failed'
+  document.getElementById('st-title').textContent = 'Payment failed'
+  document.getElementById('st-sub').textContent = 'The payment was not completed. Please try again.'
+  document.getElementById('st-progress').style.width = '0%'
+  document.getElementById('st-back-btn').style.display = 'flex'
+}
+
+function startCountdown(expiresAt) {
+  clearInterval(timerInterval)
+  function update() {
+    const diff = expiresAt - new Date()
+    const el = document.getElementById('st-timer')
+    if (diff <= 0) {
+      el.textContent = '00:00:00'
+      el.className = 'timer exp'
+      document.getElementById('st-timer-label').textContent = 'Session expired'
+      document.getElementById('st-back-btn').style.display = 'flex'
+      clearInterval(timerInterval)
+      return
+    }
+    const h = Math.floor(diff / 3600000)
+    const m = Math.floor((diff % 3600000) / 60000)
+    const s = Math.floor((diff % 60000) / 1000)
+    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    // Update progress bar
+    const totalMs = (currentSessionId ? ((expiresAt - new Date()) + diff) : diff)
+    document.getElementById('st-progress').style.width = Math.max(0, Math.min(100, (diff / (document.getElementById('d-plan').textContent !== '—' ? diff + 1000 : 1)) * 100)) + '%'
+  }
+  update()
+  timerInterval = setInterval(update, 1000)
+}
+
+function backToPlans() {
+  clearInterval(pollInterval)
+  clearInterval(timerInterval)
+  currentSessionId = null
+  document.getElementById('buy-screen').style.display = 'block'
+  document.getElementById('status-screen').style.display = 'none'
+  document.getElementById('voucher-screen').style.display = 'none'
+  const btn = document.getElementById('pay-btn')
+  btn.disabled = !selectedPlan
+  if (selectedPlan) btn.textContent = `Pay KSh ${selectedPlan.price} for ${selectedPlan.name} via M-Pesa`
+  else { btn.textContent = 'Select a plan to continue'; btn.disabled = true }
+}
+
+function showVoucher() {
+  document.getElementById('buy-screen').style.display = 'none'
+  document.getElementById('status-screen').style.display = 'none'
+  document.getElementById('voucher-screen').style.display = 'block'
+}
+function showBuy() {
+  document.getElementById('buy-screen').style.display = 'block'
+  document.getElementById('status-screen').style.display = 'none'
+  document.getElementById('voucher-screen').style.display = 'none'
+}
+
+// ── Redeem voucher ──
+async function redeemVoucher() {
+  const code  = document.getElementById('v-code').value.trim().toUpperCase()
+  const name  = document.getElementById('v-name').value.trim() || 'Voucher User'
+  const phone = document.getElementById('v-phone').value.trim()
+  if (!code)  { toast('Please enter your voucher code'); return }
+  if (!myIP)  { toast('Could not detect your IP address'); return }
+
+  try {
+    const r = await fetch(`${EDGE_FN_URL}/redeem-voucher`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, ip_address: myIP, customer_name: name, phone })
+    })
+    const d = await r.json()
+    if (d.ok) {
+      await checkExistingSession()
+      toast('✅ Voucher redeemed! You are now connected.')
+    } else {
+      toast('❌ ' + (d.error || 'Invalid voucher'))
+    }
+  } catch {
+    toast('Connection error. Try again.')
+  }
+}
+
+// ── Utils ──
+function toast(msg) {
+  const wrap = document.getElementById('toast-wrap')
+  const el = document.createElement('div')
+  el.className = 'toast'
+  el.textContent = msg
+  wrap.appendChild(el)
+  setTimeout(() => el.classList.add('show'), 10)
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300) }, 4000)
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+// ── BOOT ──
+detectIP()
+loadPlans()
+</script>
+</body>
+</html>

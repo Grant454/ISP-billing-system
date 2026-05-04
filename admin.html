@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NetBill Pro — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07101f;--surf:#0d1b2e;--card:#112030;--brd:#1a2f4a;
+  --amber:#f0a500;--cyan:#00c8d4;--green:#22c55e;--red:#ef4444;--orange:#f97316;--purple:#a78bfa;--blue:#3b82f6;
+  --txt:#cde0f5;--sub:#3e5870;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--cond:'Barlow Condensed',sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;display:flex}
+
+/* ── SETUP ── */
+#setup{position:fixed;inset:0;background:rgba(7,16,31,.97);z-index:500;display:flex;align-items:center;justify-content:center}
+.sbox{background:var(--surf);border:1px solid var(--brd);border-radius:12px;width:440px;max-width:94vw;padding:30px}
+.slogo{font-family:var(--cond);font-size:30px;font-weight:800;letter-spacing:3px;color:var(--amber);margin-bottom:3px}
+.slogo span{color:var(--cyan)}
+.ssub{color:var(--sub);font-size:12px;margin-bottom:20px;line-height:1.5}
+.sfr{margin-bottom:11px}
+.sfr label{display:block;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--sub);font-family:var(--cond);margin-bottom:4px}
+.sfr input{width:100%;background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:8px 10px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none}
+.sfr input:focus{border-color:var(--cyan)}
+.sfr .hint{font-size:9px;color:var(--sub);margin-top:3px}
+
+/* ── SIDEBAR ── */
+#sb{width:208px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--brd);display:flex;flex-direction:column;height:100vh}
+.logo{padding:17px 15px 14px;border-bottom:1px solid var(--brd)}
+.logotype{font-family:var(--cond);font-size:24px;font-weight:800;letter-spacing:3px;color:var(--amber)}
+.logotype span{color:var(--cyan)}
+.logsub{font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--sub);margin-top:1px}
+#nav{flex:1;padding:10px 0;overflow-y:auto}
+.ng{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);padding:9px 14px 3px;font-family:var(--cond);font-weight:700}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;color:var(--sub);font-size:12px;font-weight:500;border-left:3px solid transparent;transition:.13s;user-select:none}
+.ni:hover{color:var(--txt);background:rgba(255,255,255,.03)}
+.ni.on{color:var(--amber);border-left-color:var(--amber);background:rgba(240,165,0,.05)}
+.ni .ic{font-size:13px;width:15px;text-align:center;flex-shrink:0}
+.ni .nb{margin-left:auto;background:var(--red);color:#fff;border-radius:8px;font-size:8px;font-weight:700;padding:1px 5px;font-family:var(--mono)}
+.ni .dot{width:6px;height:6px;border-radius:50%;background:var(--sub);margin-left:auto;flex-shrink:0}
+.ni .dot.live{background:var(--green);box-shadow:0 0 4px var(--green)}
+#sbft{padding:10px 14px;border-top:1px solid var(--brd);font-size:10px;color:var(--sub)}
+#sbft strong{display:block;color:var(--txt);font-size:11px;margin-bottom:1px}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#top{height:49px;border-bottom:1px solid var(--brd);display:flex;align-items:center;padding:0 20px;gap:9px;background:var(--surf);flex-shrink:0}
+#ptitle{font-family:var(--cond);font-size:18px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;flex:1}
+.ttag{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);font-family:var(--cond);background:var(--card);border:1px solid var(--brd);padding:3px 7px;border-radius:3px;cursor:pointer;white-space:nowrap}
+#body{flex:1;overflow-y:auto;padding:18px 20px;scrollbar-width:thin;scrollbar-color:var(--brd) transparent}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--brd);border-radius:2px}
+
+/* ── BUTTONS ── */
+.btn{padding:5px 12px;border:none;border-radius:4px;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;transition:.13s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:hover{filter:brightness(1.12)}
+.btn:active{transform:scale(.97)}
+.bp{background:var(--amber);color:#0d0d0d}
+.bc{background:var(--cyan);color:#0d0d0d}
+.bg2{background:var(--green);color:#0d0d0d}
+.br{background:var(--red);color:#fff}
+.bo{background:var(--orange);color:#0d0d0d}
+.bpu{background:var(--purple);color:#0d0d0d}
+.bbl{background:var(--blue);color:#fff}
+.bs{background:var(--card);color:var(--txt);border:1px solid var(--brd)}
+.sm{padding:3px 8px;font-size:11px}
+.xs{padding:2px 6px;font-size:10px}
+
+/* ── PAGES ── */
+.page{display:none;animation:fu .2s ease}
+.page.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── STAT CARDS ── */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:14px}
+.sc{background:var(--card);border:1px solid var(--brd);border-radius:7px;padding:14px;position:relative;overflow:hidden}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sc.ca::after{background:linear-gradient(90deg,var(--amber),transparent)}
+.sc.cc::after{background:linear-gradient(90deg,var(--cyan),transparent)}
+.sc.cg::after{background:linear-gradient(90deg,var(--green),transparent)}
+.sc.cr::after{background:linear-gradient(90deg,var(--red),transparent)}
+.sc.cp::after{background:linear-gradient(90deg,var(--purple),transparent)}
+.sclbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);font-family:var(--cond);font-weight:700;margin-bottom:5px}
+.scval{font-family:var(--mono);font-size:22px;font-weight:500;line-height:1}
+.scsub{font-size:10px;color:var(--sub);margin-top:3px}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--brd);border-radius:7px;overflow:hidden;margin-bottom:14px}
+.ch{padding:10px 14px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-height:40px}
+.ct{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber)}
+.ca2{display:flex;gap:6px;align-items:center}
+
+/* ── TABLE ── */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;padding:7px 11px;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);font-family:var(--cond);font-weight:700;border-bottom:1px solid var(--brd);white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(26,47,74,.4);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+td{padding:8px 11px;font-size:12px;vertical-align:middle;white-space:nowrap}
+.mn{font-family:var(--mono)}
+.dm{color:var(--sub);font-size:11px}
+.ar{display:flex;gap:3px}
+tr.active-row{background:rgba(34,197,94,.04)!important}
+tr.expired-row{background:rgba(239,68,68,.04)!important}
+
+/* ── BADGES ── */
+.bdg{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:700;font-family:var(--mono);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.bact{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.bpen{background:rgba(240,165,0,.1);color:var(--amber);border:1px solid rgba(240,165,0,.2)}
+.bexp{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.bfail{background:rgba(100,116,139,.1);color:var(--sub);border:1px solid var(--brd)}
+.bdisc{background:rgba(100,116,139,.1);color:var(--sub);border:1px solid var(--brd)}
+
+/* ── FILTER BAR ── */
+.fb{display:flex;gap:7px;align-items:center;margin-bottom:11px;flex-wrap:wrap}
+.si{background:var(--card);border:1px solid var(--brd);border-radius:4px;padding:5px 10px 5px 26px;color:var(--txt);font-family:var(--sans);font-size:12px;outline:none;width:180px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%233e5870' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:8px center;transition:border-color .13s}
+.si:focus{border-color:var(--cyan)}
+.fsel{background:var(--card);border:1px solid var(--brd);border-radius:4px;padding:5px 8px;color:var(--txt);font-family:var(--sans);font-size:12px;outline:none;cursor:pointer}
+.fsel option{background:var(--surf)}
+
+/* ── MODAL ── */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .18s}
+.mo.open{opacity:1;pointer-events:all}
+.mdl{background:var(--surf);border:1px solid var(--brd);border-radius:10px;width:480px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:22px;transform:translateY(14px);transition:transform .18s;scrollbar-width:thin;scrollbar-color:var(--brd) transparent}
+.mo.open .mdl{transform:translateY(0)}
+.mlg{width:560px}
+.mtitle{font-family:var(--cond);font-size:18px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:14px}
+.fr{margin-bottom:11px}
+.fr label{display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);font-family:var(--cond);font-weight:700;margin-bottom:3px}
+.fr input,.fr select,.fr textarea{width:100%;background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:7px 10px;color:var(--txt);font-family:var(--sans);font-size:12px;outline:none;transition:border-color .13s;resize:vertical}
+.fr input:focus,.fr select:focus{border-color:var(--cyan)}
+.fr select option{background:var(--surf)}
+.fr .hint{font-size:9px;color:var(--sub);margin-top:2px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.mfooter{display:flex;gap:6px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--brd)}
+.ibox{background:rgba(0,200,212,.05);border:1px solid rgba(0,200,212,.15);border-radius:5px;padding:8px 12px;font-size:11px;color:var(--sub);margin-bottom:10px;line-height:1.6}
+.wbox{background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.18);border-radius:5px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:10px;line-height:1.6}
+
+/* ── TOAST ── */
+#toasts{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;z-index:999;max-width:280px}
+.toast{background:var(--card);border:1px solid var(--brd);border-radius:6px;padding:9px 13px;font-size:11px;transform:translateY(14px);opacity:0;transition:.2s;line-height:1.4}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ts{border-left:3px solid var(--green)}
+.toast.te{border-left:3px solid var(--red)}
+.toast.ti{border-left:3px solid var(--cyan)}
+
+/* ── MISC ── */
+.ldr td{text-align:center;padding:24px;color:var(--sub);font-family:var(--mono);font-size:11px}
+.emp td{text-align:center;padding:22px;color:var(--sub);font-size:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--brd);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;vertical-align:middle}
+
+/* ── SETTINGS TABS ── */
+.stabs{display:flex;border-bottom:1px solid var(--brd);margin-bottom:13px;overflow-x:auto}
+.stab{padding:7px 14px;cursor:pointer;font-size:10px;font-family:var(--cond);font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--sub);border-bottom:2px solid transparent;transition:.12s;white-space:nowrap;margin-bottom:-1px}
+.stab:hover{color:var(--txt)}
+.stab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+.stc{display:none}
+.stc.on{display:block}
+.ss{background:var(--card);border:1px solid var(--brd);border-radius:7px;padding:17px;margin-bottom:12px}
+.sstitle{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px}
+.sqlb{background:var(--bg);border:1px solid var(--brd);border-radius:5px;padding:11px;font-family:var(--mono);font-size:10px;color:var(--sub);line-height:1.8;overflow-x:auto;white-space:pre;margin-top:6px;max-height:200px;overflow-y:auto}
+
+/* ── TIMER COLUMN ── */
+.tc-active{color:var(--green)}
+.tc-exp{color:var(--red)}
+.tc-soon{color:var(--orange)}
+
+@media(max-width:900px){.sg{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="sbox">
+    <div class="slogo">Net<span>Bill</span> <span style="font-size:13px;color:var(--sub);letter-spacing:2px">ADMIN</span></div>
+    <div class="ssub">Connect Supabase + configure MikroTik &amp; M-Pesa to get started.</div>
+    <div class="sfr"><label>Supabase Project URL</label><input id="su-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co"/></div>
+    <div class="sfr"><label>Supabase Anon Key</label><input id="su-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIs…"/></div>
+    <div class="sfr"><label>Edge Function URL (from Supabase)</label><input id="su-fn" type="url" placeholder="https://xxxx.supabase.co/functions/v1/netbill"/><div class="hint">Deploy edge-function.js to Supabase Functions and paste the URL here</div></div>
+    <div class="sfr"><label>ISP Name</label><input id="su-isp" type="text" placeholder="Jamii Fibre Ltd"/></div>
+    <button class="btn bc" style="width:100%;justify-content:center;padding:9px;font-size:13px" onclick="connectSB()">Connect &amp; Launch →</button>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div id="toasts"></div>
+
+<!-- SIDEBAR -->
+<aside id="sb">
+  <div class="logo">
+    <div class="logotype">Net<span>Bill</span></div>
+    <div class="logsub">ISP Admin Panel</div>
+  </div>
+  <div id="nav">
+    <div class="ng">Overview</div>
+    <div class="ni on" onclick="go('dashboard',this)"><span class="ic">⊞</span> Dashboard</div>
+    <div class="ng">Network</div>
+    <div class="ni" onclick="go('sessions',this)"><span class="ic">◎</span> Live Sessions <span class="nb" id="live-badge" style="display:none">0</span></div>
+    <div class="ni" onclick="go('customers',this)"><span class="ic">◉</span> Customers</div>
+    <div class="ng">Billing</div>
+    <div class="ni" onclick="go('payments',this)"><span class="ic">⊕</span> Payments</div>
+    <div class="ni" onclick="go('vouchers',this)"><span class="ic">⧉</span> Vouchers <span style="font-size:8px;color:var(--sub);margin-left:2px">Admin Only</span></div>
+    <div class="ng">Setup</div>
+    <div class="ni" onclick="go('plans',this)"><span class="ic">◈</span> Plans</div>
+    <div class="ni" onclick="go('reports',this)"><span class="ic">▦</span> Reports</div>
+    <div class="ni" onclick="go('settings',this)"><span class="ic">⚙</span> Settings <span class="dot" id="mt-dot"></span></div>
+  </div>
+  <div id="sbft">
+    <strong id="sbname">NetBill Pro</strong>
+    <span style="font-size:9px;color:var(--green)">● Connected</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="top">
+    <div id="ptitle">Dashboard</div>
+    <div class="ttag" id="mt-tag" onclick="go('settings',document.querySelector('[onclick*=settings]'))">MikroTik: Not set</div>
+    <div class="ttag" id="mp-tag" onclick="go('settings',document.querySelector('[onclick*=settings]'))">M-Pesa: Not set</div>
+    <button class="btn bp" id="topbtn" onclick="topact()">＋ Manual Connect</button>
+  </div>
+  <div id="body">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="page on" id="pg-dashboard">
+      <div class="sg">
+        <div class="sc cc"><div class="sclbl">Live Sessions</div><div class="scval" id="d-live">—</div><div class="scsub">connected right now</div></div>
+        <div class="sc ca"><div class="sclbl">Revenue Today</div><div class="scval" id="d-today">—</div><div class="scsub">KSh</div></div>
+        <div class="sc cg"><div class="sclbl">Revenue This Month</div><div class="scval" id="d-month">—</div><div class="scsub">KSh</div></div>
+        <div class="sc cr"><div class="sclbl">Failed Payments</div><div class="scval" id="d-fail">—</div><div class="scsub">today</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px">
+        <div class="card">
+          <div class="ch"><span class="ct">Recent Sessions</span><button class="btn bs sm" onclick="go('sessions',document.querySelector('[onclick*=sessions]'))">All →</button></div>
+          <div class="tw"><table><thead><tr><th>IP Address</th><th>Customer</th><th>Plan</th><th>Amount</th><th>Status</th><th>Time Left</th></tr></thead><tbody id="d-stb"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Top Plans Today</span></div>
+          <div id="d-plans-chart" style="padding:13px;display:flex;flex-direction:column;gap:9px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Recent Payments</span></div>
+        <div class="tw"><table><thead><tr><th>Time</th><th>Phone</th><th>IP</th><th>Plan</th><th>Amount</th><th>M-Pesa Receipt</th><th>Result</th></tr></thead><tbody id="d-ptb"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ══ SESSIONS ══ -->
+    <div class="page" id="pg-sessions">
+      <div class="fb">
+        <input class="si" type="text" placeholder="IP / name / phone…" oninput="fS(this.value)"/>
+        <select class="fsel" onchange="fSSt(this.value)">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="expired">Expired</option>
+          <option value="failed">Failed</option>
+          <option value="disconnected">Disconnected</option>
+        </select>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn bs sm" onclick="loadSessions()">↺ Refresh</button>
+          <button class="btn bo sm" onclick="runCronDisconnect()">⏰ Run Expiry Check</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">All Sessions</span><span id="s-cnt" class="dm"></span></div>
+        <div class="tw"><table>
+          <thead><tr><th>IP Address</th><th>Customer</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th><th>Connected At</th><th>Expires At</th><th>Time Left</th><th>Receipt</th><th>Actions</th></tr></thead>
+          <tbody id="stb"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══ CUSTOMERS ══ -->
+    <div class="page" id="pg-customers">
+      <div class="fb">
+        <input class="si" type="text" placeholder="Name / phone / IP…" oninput="fCust(this.value)"/>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Customers</span><span id="cust-cnt" class="dm"></span></div>
+        <div class="tw"><table>
+          <thead><tr><th>Name</th><th>Phone</th><th>IP Address</th><th>Total Sessions</th><th>Total Spent (KSh)</th><th>Last Seen</th><th>Actions</th></tr></thead>
+          <tbody id="cust-tb"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══ PAYMENTS ══ -->
+    <div class="page" id="pg-payments">
+      <div class="sg">
+        <div class="sc cg"><div class="sclbl">Today</div><div class="scval mn" id="p-today">—</div><div class="scsub">KSh</div></div>
+        <div class="sc ca"><div class="sclbl">This Month</div><div class="scval mn" id="p-month">—</div><div class="scsub">KSh</div></div>
+        <div class="sc cc"><div class="sclbl">Total Transactions</div><div class="scval mn" id="p-cnt">—</div><div class="scsub">successful</div></div>
+        <div class="sc cr"><div class="sclbl">Failed Today</div><div class="scval mn" id="p-fail">—</div><div class="scsub">payments</div></div>
+      </div>
+      <div class="fb">
+        <input class="si" type="text" placeholder="Phone / receipt / IP…" oninput="fPay(this.value)"/>
+        <button class="btn bs sm" style="margin-left:auto" onclick="exportPayCSV()">↓ CSV</button>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Payment Ledger</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>Date/Time</th><th>Phone</th><th>IP</th><th>Plan</th><th>Amount (KSh)</th><th>M-Pesa Receipt</th><th>Result</th></tr></thead>
+          <tbody id="pay-tb"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══ VOUCHERS (Admin Only) ══ -->
+    <div class="page" id="pg-vouchers">
+      <div class="wbox">🔒 Vouchers are for special admin use only — giveaways, testing, resellers. Regular customers pay via M-Pesa and connect automatically.</div>
+      <div class="fb">
+        <input class="si" type="text" placeholder="Code / label / plan…" oninput="fV(this.value)"/>
+        <select class="fsel" onchange="fVSt(this.value)"><option value="">All Status</option><option value="active">Active</option><option value="used">Used</option><option value="expired">Expired</option></select>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Voucher Pool</span><button class="btn bp" onclick="opM('m-vouch')">⚡ Generate Vouchers</button></div>
+        <div class="tw"><table>
+          <thead><tr><th>Code</th><th>Plan</th><th>Duration</th><th>Price (KSh)</th><th>Uses</th><th>Expires</th><th>Label</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="v-tb"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══ PLANS ══ -->
+    <div class="page" id="pg-plans">
+      <div class="card">
+        <div class="ch"><span class="ct">Service Plans</span><button class="btn bp" onclick="opM('m-plan')">＋ Add Plan</button></div>
+        <div class="tw"><table>
+          <thead><tr><th>Name</th><th>Duration</th><th>Price (KSh)</th><th>Speed ↓</th><th>Speed ↑</th><th>MT Profile</th><th>Sessions</th><th>Revenue</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody id="plan-tb"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div class="page" id="pg-reports">
+      <div class="sg">
+        <div class="sc ca"><div class="sclbl">Today</div><div class="scval mn" id="r-today">—</div><div class="scsub">KSh</div></div>
+        <div class="sc cg"><div class="sclbl">This Month</div><div class="scval mn" id="r-month">—</div><div class="scsub">KSh</div></div>
+        <div class="sc cc"><div class="sclbl">Total Sessions</div><div class="scval mn" id="r-sessions">—</div><div class="scsub">all time</div></div>
+        <div class="sc cp"><div class="sclbl">Unique Customers</div><div class="scval mn" id="r-custs">—</div><div class="scsub">all time</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card">
+          <div class="ch"><span class="ct">Revenue by Plan</span></div>
+          <div id="rpt-plans" style="padding:13px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Daily Revenue — This Month (KSh)</span></div>
+          <div id="rpt-daily" style="padding:13px;display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div class="page" id="pg-settings">
+      <div class="stabs">
+        <div class="stab on" onclick="stab('isp',this)">ISP / Supabase</div>
+        <div class="stab" onclick="stab('mikrotik',this)">MikroTik</div>
+        <div class="stab" onclick="stab('mpesa',this)">M-Pesa</div>
+        <div class="stab" onclick="stab('sms',this)">SMS</div>
+        <div class="stab" onclick="stab('mt-setup',this)">MikroTik Firewall Setup</div>
+      </div>
+
+      <div class="stc on" id="st-isp">
+        <div class="ss">
+          <div class="sstitle">Supabase &amp; ISP</div>
+          <div class="fg2">
+            <div class="fr"><label>Supabase URL</label><input id="s-sburl" type="url"/></div>
+            <div class="fr"><label>Anon Key</label><input id="s-sbkey" type="text"/></div>
+          </div>
+          <div class="fg2">
+            <div class="fr"><label>Edge Function URL</label><input id="s-fnurl" type="url"/></div>
+            <div class="fr"><label>ISP Name</label><input id="s-isp" type="text"/></div>
+          </div>
+          <div class="fg2">
+            <div class="fr"><label>Paybill Number</label><input id="s-pb" type="text" placeholder="247247"/></div>
+            <div class="fr"><label>Support Phone</label><input id="s-tel" type="text" placeholder="+254 700 000 000"/></div>
+          </div>
+          <button class="btn bc sm" onclick="saveISP()">Save</button>
+        </div>
+      </div>
+
+      <div class="stc" id="st-mikrotik">
+        <div class="ss">
+          <div class="sstitle">MikroTik Connection Test</div>
+          <div class="ibox" id="mt-testbar">Configure Edge Function secrets (MT_IP, MT_USER, MT_PASS) then test below.</div>
+          <button class="btn bc sm" onclick="testMT()">Test MikroTik via Edge Function</button>
+        </div>
+        <div class="ss">
+          <div class="sstitle">Edge Function Secrets</div>
+          <div class="ibox">These are set via Supabase CLI, not in this UI:<br/>
+            <code style="font-family:var(--mono);font-size:10px;color:var(--cyan)">
+supabase secrets set MT_IP=192.168.88.1<br/>
+supabase secrets set MT_PORT=80<br/>
+supabase secrets set MT_USER=admin<br/>
+supabase secrets set MT_PASS=yourpassword<br/>
+supabase secrets set MP_ENV=live<br/>
+supabase secrets set MP_KEY=consumer_key<br/>
+supabase secrets set MP_SECRET=consumer_secret<br/>
+supabase secrets set MP_SHORTCODE=174379<br/>
+supabase secrets set MP_PASSKEY=your_passkey<br/>
+supabase secrets set MP_CALLBACK_URL=https://xxx.supabase.co/functions/v1/netbill/mpesa-callback<br/>
+supabase secrets set AT_USERNAME=sandbox<br/>
+supabase secrets set AT_KEY=your_at_key<br/>
+supabase secrets set ISP_NAME=Jamii Fibre<br/>
+supabase secrets set ISP_PAYBILL=247247
+            </code>
+          </div>
+        </div>
+      </div>
+
+      <div class="stc" id="st-mpesa">
+        <div class="ss">
+          <div class="sstitle">M-Pesa Daraja Setup</div>
+          <div class="ibox">
+            1. Register at <strong>developer.safaricom.co.ke</strong><br/>
+            2. Create an App → Get Consumer Key &amp; Secret<br/>
+            3. Set secrets via CLI (see MikroTik tab)<br/>
+            4. Set MP_CALLBACK_URL to your Edge Function URL + <code style="color:var(--cyan)">/mpesa-callback</code><br/>
+            5. Register C2B URLs on Daraja for Paybill auto-matching<br/><br/>
+            <strong>Flow:</strong> Customer selects plan → portal calls Edge Function → STK Push sent → customer enters PIN → Daraja calls your callback URL → Edge Function connects IP on MikroTik automatically.
+          </div>
+        </div>
+      </div>
+
+      <div class="stc" id="st-sms">
+        <div class="ss">
+          <div class="sstitle">Africa's Talking SMS</div>
+          <div class="ibox">
+            1. Sign up at <strong>africastalking.com</strong><br/>
+            2. Set AT_USERNAME, AT_KEY, AT_SENDER as Edge Function secrets<br/>
+            3. SMS are sent automatically on: payment success, session expiry<br/><br/>
+            Templates are in the edge function. You can edit <strong>edge-function.js</strong> to customise messages.
+          </div>
+        </div>
+      </div>
+
+      <div class="stc" id="st-mt-setup">
+        <div class="ss">
+          <div class="sstitle">One-Time MikroTik Firewall Setup</div>
+          <div class="ibox">Run these commands ONCE in MikroTik Terminal (Winbox or SSH). This is all you need — NetBill manages everything else automatically via REST API.</div>
+          <div class="sqlb">/ip firewall address-list add list=netbill-blocked address=0.0.0.0/0 comment="Default block all"
+
+# Allow active NetBill customers (NetBill adds/removes IPs here)
+/ip firewall filter add chain=forward src-address-list=netbill-active action=accept place-before=0 comment="NetBill - Allow Active"
+/ip firewall filter add chain=forward dst-address-list=netbill-active action=accept place-before=1 comment="NetBill - Return Traffic"
+/ip firewall filter add chain=input src-address-list=netbill-active action=accept place-before=0 comment="NetBill - Allow Active Input"
+
+# Allow access to the portal (so people can pay even without internet)
+/ip firewall filter add chain=forward dst-address=YOUR_PORTAL_SERVER_IP action=accept place-before=0 comment="NetBill - Allow Portal"
+
+# Drop everything else (put this AFTER your existing rules)
+# /ip firewall filter add chain=forward action=drop comment="NetBill - Drop Unpaid"
+
+# Enable REST API (if not already on)
+/ip service enable www
+
+# Create a dedicated API user (recommended)
+/user add name=netbill-api password=STRONG_PASSWORD group=full comment="NetBill API User"</div>
+          <div style="margin-top:10px;font-size:11px;color:var(--orange)">⚠ The DROP rule is commented out. Only enable it when you are ready — it will cut off anyone not in the netbill-active list. Test thoroughly first.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- Manual Connect -->
+<div class="mo" id="m-connect">
+  <div class="mdl">
+    <div class="mtitle">⚡ Manual Connect</div>
+    <div class="ibox">Manually connect an IP to the internet by creating a session. Used for cash payments or admin override.</div>
+    <div class="fg2">
+      <div class="fr"><label>Customer Name</label><input id="mc-name" type="text" placeholder="Jane Mwangi"/></div>
+      <div class="fr"><label>Phone (+254…)</label><input id="mc-phone" type="tel" placeholder="+254712345678"/></div>
+    </div>
+    <div class="fg2">
+      <div class="fr"><label>IP Address to Connect</label><input id="mc-ip" type="text" placeholder="192.168.1.100"/></div>
+      <div class="fr"><label>Plan</label><select id="mc-plan"></select></div>
+    </div>
+    <div class="fr"><label>Amount Paid (KSh)</label><input id="mc-amt" type="number" step="0.01"/></div>
+    <div class="fr"><label>Receipt / Note</label><input id="mc-ref" type="text" placeholder="Cash / receipt #"/></div>
+    <div class="mfooter">
+      <button class="btn bs" onclick="clM('m-connect')">Cancel</button>
+      <button class="btn bg2" onclick="manualConnect()">Connect Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Vouchers -->
+<div class="mo" id="m-vouch">
+  <div class="mdl">
+    <div class="mtitle">⧉ Generate Vouchers</div>
+    <div class="wbox">Vouchers are for admin use only. Regular customers pay via M-Pesa on the portal.</div>
+    <div class="fg3">
+      <div class="fr"><label>Plan</label><select id="vg-plan"></select></div>
+      <div class="fr"><label>Quantity</label><input id="vg-qty" type="number" value="5" min="1" max="100"/></div>
+      <div class="fr"><label>Price (KSh, 0 = free)</label><input id="vg-price" type="number" value="0" step="0.01"/></div>
+    </div>
+    <div class="fg2">
+      <div class="fr"><label>Pool Expiry (days, blank = no expiry)</label><input id="vg-exp" type="number" placeholder="30"/></div>
+      <div class="fr"><label>Max Uses per Code</label><input id="vg-uses" type="number" value="1" min="1"/></div>
+    </div>
+    <div class="fr"><label>Batch Label / Notes</label><input id="vg-label" type="text" placeholder="School Opening, Promo, Testing…"/></div>
+    <div class="mfooter">
+      <button class="btn bs" onclick="clM('m-vouch')">Cancel</button>
+      <button class="btn bp" onclick="genVouchers()">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Plan -->
+<div class="mo" id="m-plan">
+  <div class="mdl">
+    <div class="mtitle" id="m-plan-ttl">◈ Add Plan</div>
+    <div class="fg2">
+      <div class="fr"><label>Plan Name</label><input id="pl-name" type="text" placeholder="1 Day"/></div>
+      <div class="fr"><label>Duration (hours)</label><input id="pl-dur" type="number" placeholder="24" step="0.5"/></div>
+    </div>
+    <div class="fg2">
+      <div class="fr"><label>Price (KSh)</label><input id="pl-price" type="number" step="0.01" placeholder="50"/></div>
+      <div class="fr"><label>Sort Order</label><input id="pl-sort" type="number" placeholder="5"/></div>
+    </div>
+    <div class="fg2">
+      <div class="fr"><label>Download Speed (Mbps)</label><input id="pl-dl" type="number" placeholder="10"/></div>
+      <div class="fr"><label>Upload Speed (Mbps)</label><input id="pl-ul" type="number" placeholder="5"/></div>
+    </div>
+    <div class="fr"><label>MikroTik Queue Profile (optional)</label><input id="pl-mt" type="text" placeholder="default"/><div class="hint">Optional RouterOS queue profile for bandwidth grouping</div></div>
+    <div class="fr"><label style="display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" id="pl-active" checked/> Plan is Active (visible on portal)</label></div>
+    <div class="mfooter">
+      <button class="btn bs" onclick="clM('m-plan')">Cancel</button>
+      <button class="btn bp" onclick="savePlan()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════
+let SB = null
+let FN_URL = ''
+let PLANS = [], SESSIONS = [], PAYMENTS = [], CUSTOMERS = [], VOUCHERS = []
+let ePlanId = null
+let fSq = '', fSStat = '', fCq = '', fPq = '', fVq = '', fVSt = ''
+const ls = k => localStorage.getItem(k) || ''
+const lss = (k,v) => localStorage.setItem(k,v)
+const KSh = v => 'KSh ' + Number(v).toLocaleString('en-KE',{minimumFractionDigits:0,maximumFractionDigits:0})
+const fmtDT = d => d ? new Date(d).toLocaleString('en-KE',{timeZone:'Africa/Nairobi',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:true}) : '—'
+const genCode = (n=6) => { const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('') }
+
+function toast(msg, type='s') {
+  const el = document.createElement('div')
+  el.className = `toast t${type}`; el.textContent = msg
+  document.getElementById('toasts').appendChild(el)
+  setTimeout(() => el.classList.add('show'), 10)
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300) }, 3800)
+}
+function opM(id) { document.getElementById(id).classList.add('open') }
+function clM(id) { document.getElementById(id).classList.remove('open') }
+document.querySelectorAll('.mo').forEach(el => el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open') }))
+
+function statusBadge(s) {
+  const m = { active:'bact', pending:'bpen', expired:'bexp', failed:'bfail', disconnected:'bdisc' }
+  return `<span class="bdg ${m[s]||'bfail'}">${s}</span>`
+}
+
+function timeLeft(expires) {
+  if (!expires) return '—'
+  const diff = new Date(expires) - new Date()
+  if (diff <= 0) return '<span class="tc-exp">Expired</span>'
+  const h = Math.floor(diff/3600000)
+  const m = Math.floor((diff%3600000)/60000)
+  const cls = diff < 1800000 ? 'tc-soon' : 'tc-active'
+  return `<span class="${cls}">${h > 0 ? h+'h ' : ''}${m}m</span>`
+}
+
+// ══════════════════════════════════════════════
+//  INIT / CONNECT
+// ══════════════════════════════════════════════
+function initSB() {
+  const url = ls('sb_url'), key = ls('sb_key')
+  if (!url || !key) return false
+  try { SB = supabase.createClient(url, key); return true } catch { return false }
+}
+
+function connectSB() {
+  const url = document.getElementById('su-url').value.trim()
+  const key = document.getElementById('su-key').value.trim()
+  const fn  = document.getElementById('su-fn').value.trim()
+  const isp = document.getElementById('su-isp').value.trim()
+  if (!url || !key) { toast('URL and key required', 'e'); return }
+  lss('sb_url',url); lss('sb_key',key)
+  if (fn)  lss('fn_url', fn)
+  if (isp) lss('isp_name', isp)
+  FN_URL = fn
+  if (initSB()) {
+    document.getElementById('setup').style.display = 'none'
+    document.getElementById('sbname').textContent = isp || 'NetBill Pro'
+    loadAll()
+    toast('Connected ✓')
+  } else toast('Connection failed — check URL and key', 'e')
+}
+
+async function loadAll() {
+  try {
+    const [p, s, pays, custs, v] = await Promise.all([
+      SB.from('plans').select('*').order('sort_order').then(r => r.data || []),
+      SB.from('sessions').select('*').order('created_at', {ascending:false}).limit(200).then(r => r.data || []),
+      SB.from('payments').select('*').order('created_at', {ascending:false}).limit(500).then(r => r.data || []),
+      SB.from('customers').select('*').order('created_at', {ascending:false}).then(r => r.data || []),
+      SB.from('vouchers').select('*').order('created_at', {ascending:false}).then(r => r.data || []),
+    ])
+    PLANS = p; SESSIONS = s; PAYMENTS = pays; CUSTOMERS = custs; VOUCHERS = v
+    fillPlanDDs()
+    updateBadges()
+    renderPage('dashboard')
+    // Auto-refresh sessions every 30s
+    setInterval(() => loadSessions(), 30000)
+  } catch(e) { toast('Load error: ' + e.message, 'e') }
+}
+
+async function loadSessions() {
+  const { data } = await SB.from('sessions').select('*').order('created_at', {ascending:false}).limit(200)
+  SESSIONS = data || []
+  updateBadges()
+  const cur = document.querySelector('.page.on')?.id.replace('pg-','')
+  if (cur === 'sessions') renderSessions()
+  if (cur === 'dashboard') renderDash()
+}
+
+function fillPlanDDs() {
+  const opts = PLANS.map(p => `<option value="${p.id}">${p.name} — ${KSh(p.price_ksh)}</option>`).join('')
+  ;['mc-plan','vg-plan'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = opts })
+}
+
+function updateBadges() {
+  const live = SESSIONS.filter(s => s.status === 'active').length
+  const lb = document.getElementById('live-badge')
+  lb.textContent = live; lb.style.display = live ? '' : 'none'
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+const PTITLES = {dashboard:'Dashboard',sessions:'Live Sessions',customers:'Customers',payments:'Payments',vouchers:'Vouchers',plans:'Service Plans',reports:'Reports',settings:'Settings'}
+const PBTN = {dashboard:'＋ Manual Connect',sessions:'＋ Manual Connect',customers:'',payments:'',vouchers:'',plans:'',reports:'',settings:''}
+
+function go(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'))
+  document.getElementById('pg-'+page).classList.add('on')
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'))
+  if(el) el.classList.add('on')
+  document.getElementById('ptitle').textContent = PTITLES[page]
+  const btn = document.getElementById('topbtn')
+  btn.textContent = PBTN[page] || ''
+  btn.style.display = PBTN[page] ? '' : 'none'
+  renderPage(page)
+}
+
+function renderPage(p) {
+  const m = {dashboard:renderDash,sessions:renderSessions,customers:renderCustomers,payments:renderPayments,vouchers:renderVouchers,plans:renderPlans,reports:renderReports,settings:renderSettings}
+  if(m[p]) m[p]()
+}
+
+function topact() { opM('m-connect') }
+
+// ══════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════
+function renderDash() {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const todayPays = PAYMENTS.filter(p => p.result_code===0 && new Date(p.created_at)>=todayStart)
+  const monthPays = PAYMENTS.filter(p => p.result_code===0 && new Date(p.created_at)>=monthStart)
+  const failToday = PAYMENTS.filter(p => p.result_code!==0 && new Date(p.created_at)>=todayStart)
+  const liveSess  = SESSIONS.filter(s => s.status === 'active')
+
+  document.getElementById('d-live').textContent = liveSess.length
+  document.getElementById('d-today').textContent = KSh(todayPays.reduce((s,p)=>s+Number(p.amount_ksh),0))
+  document.getElementById('d-month').textContent = KSh(monthPays.reduce((s,p)=>s+Number(p.amount_ksh),0))
+  document.getElementById('d-fail').textContent = failToday.length
+
+  // Recent sessions
+  const stb = document.getElementById('d-stb')
+  stb.innerHTML = SESSIONS.slice(0,8).map(s => `<tr class="${s.status==='active'?'active-row':s.status==='expired'?'expired-row':''}">
+    <td class="mn" style="color:var(--cyan)">${s.ip_address}</td>
+    <td>${s.customer_name}</td>
+    <td>${s.plan_name||'—'}</td>
+    <td class="mn" style="color:var(--green)">${s.amount_ksh?KSh(s.amount_ksh):'—'}</td>
+    <td>${statusBadge(s.status)}</td>
+    <td>${s.status==='active'?timeLeft(s.expires_at):'—'}</td>
+  </tr>`).join('') || '<tr class="emp"><td colspan="6">No sessions yet</td></tr>'
+
+  // Recent payments
+  const ptb = document.getElementById('d-ptb')
+  ptb.innerHTML = PAYMENTS.slice(0,8).map(p => `<tr>
+    <td class="mn dm">${fmtDT(p.created_at)}</td>
+    <td class="mn">${p.phone||'—'}</td>
+    <td class="mn" style="color:var(--cyan)">${SESSIONS.find(s=>s.checkout_request_id===p.checkout_request_id)?.ip_address||'—'}</td>
+    <td>${SESSIONS.find(s=>s.checkout_request_id===p.checkout_request_id)?.plan_name||'—'}</td>
+    <td class="mn" style="${p.result_code===0?'color:var(--green)':'color:var(--red)'}">${p.amount_ksh?KSh(p.amount_ksh):'—'}</td>
+    <td class="mn dm">${p.mpesa_receipt||'—'}</td>
+    <td><span class="bdg ${p.result_code===0?'bact':'bexp'}">${p.result_code===0?'Success':'Failed'}</span></td>
+  </tr>`).join('') || '<tr class="emp"><td colspan="7">No payments yet</td></tr>'
+
+  // Top plans today
+  const planRev = {}
+  SESSIONS.filter(s => new Date(s.created_at) >= todayStart && s.status !== 'failed').forEach(s => {
+    planRev[s.plan_name||'—'] = (planRev[s.plan_name||'—']||0) + Number(s.amount_ksh||0)
+  })
+  const maxRev = Math.max(...Object.values(planRev), 1)
+  document.getElementById('d-plans-chart').innerHTML = Object.entries(planRev).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([n,v])=>`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;flex:1;color:var(--txt)">${n}</span>
+      <div style="width:80px;height:4px;background:var(--brd);border-radius:2px;overflow:hidden"><div style="height:100%;width:${(v/maxRev*100).toFixed(0)}%;background:var(--amber)"></div></div>
+      <span class="mn" style="font-size:10px;color:var(--amber)">${KSh(v)}</span>
+    </div>`).join('') || '<div class="dm" style="font-size:12px">No sessions today</div>'
+}
+
+// ══════════════════════════════════════════════
+//  SESSIONS
+// ══════════════════════════════════════════════
+function renderSessions() {
+  let l = SESSIONS
+  if(fSq)    l = l.filter(s => (s.ip_address+s.customer_name+s.customer_phone).toLowerCase().includes(fSq.toLowerCase()))
+  if(fSStat) l = l.filter(s => s.status === fSStat)
+  document.getElementById('s-cnt').textContent = l.length + ' sessions'
+  const tb = document.getElementById('stb')
+  tb.innerHTML = l.map(s => `<tr class="${s.status==='active'?'active-row':s.status==='expired'?'expired-row':''}">
+    <td class="mn" style="color:var(--cyan)">${s.ip_address}</td>
+    <td><strong>${s.customer_name}</strong></td>
+    <td class="mn dm">${s.customer_phone}</td>
+    <td>${s.plan_name||'—'}</td>
+    <td class="mn" style="color:var(--green)">${s.amount_ksh?KSh(s.amount_ksh):'—'}</td>
+    <td>${statusBadge(s.status)}</td>
+    <td class="mn dm">${fmtDT(s.connected_at)}</td>
+    <td class="mn dm">${fmtDT(s.expires_at)}</td>
+    <td>${s.status==='active'?timeLeft(s.expires_at):'—'}</td>
+    <td class="mn dm">${s.mpesa_receipt||'—'}</td>
+    <td><div class="ar">
+      ${s.status==='active'?`<button class="btn br xs" onclick="adminDisconnect('${s.id}')">Disconnect</button>`:''}
+      ${s.status==='pending'||s.status==='failed'?`<button class="btn bg2 xs" onclick="adminConnect('${s.id}')">Force Connect</button>`:''}
+    </div></td>
+  </tr>`).join('') || '<tr class="emp"><td colspan="11">No sessions found</td></tr>'
+}
+function fS(v) { fSq=v; renderSessions() }
+function fSSt(v) { fSStat=v; renderSessions() }
+
+async function adminConnect(id) {
+  try {
+    const r = await fetch(`${FN_URL}/connect-ip`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:id}) })
+    const d = await r.json()
+    if(d.ok) { toast('Connected ✓'); await loadSessions() }
+    else toast('Error: '+(d.error||'failed'), 'e')
+  } catch(e) { toast(e.message,'e') }
+}
+
+async function adminDisconnect(id) {
+  if(!confirm('Disconnect this session?')) return
+  try {
+    const r = await fetch(`${FN_URL}/disconnect-ip`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:id}) })
+    const d = await r.json()
+    if(d.ok) { toast('Disconnected ✓'); await loadSessions() }
+    else toast('Error: '+(d.error||'failed'),'e')
+  } catch(e) { toast(e.message,'e') }
+}
+
+async function runCronDisconnect() {
+  toast('Running expiry check…','i')
+  try {
+    const r = await fetch(`${FN_URL}/cron-disconnect`, { method:'POST', headers:{'Content-Type':'application/json'} })
+    const d = await r.json()
+    toast(`Done — ${d.disconnected||0} disconnected ✓`)
+    await loadSessions()
+  } catch(e) { toast(e.message,'e') }
+}
+
+// ══════════════════════════════════════════════
+//  CUSTOMERS
+// ══════════════════════════════════════════════
+function renderCustomers() {
+  let l = CUSTOMERS
+  if(fCq) l = l.filter(c => (c.name+c.phone+(c.ip_address||'')).toLowerCase().includes(fCq.toLowerCase()))
+  document.getElementById('cust-cnt').textContent = l.length + ' customers'
+  const tb = document.getElementById('cust-tb')
+  tb.innerHTML = l.map(c => {
+    const cSess  = SESSIONS.filter(s => s.customer_phone === c.phone)
+    const cPays  = PAYMENTS.filter(p => p.phone === c.phone && p.result_code === 0)
+    const spent  = cPays.reduce((s,p) => s+Number(p.amount_ksh||0), 0)
+    const lastSess = cSess[0]
+    return `<tr>
+      <td><strong>${c.name}</strong></td>
+      <td class="mn">${c.phone}</td>
+      <td class="mn" style="color:var(--cyan)">${c.ip_address||'—'}</td>
+      <td class="mn" style="text-align:center">${cSess.length}</td>
+      <td class="mn" style="color:var(--green)">${KSh(spent)}</td>
+      <td class="mn dm">${lastSess?fmtDT(lastSess.created_at):'—'}</td>
+      <td><div class="ar">
+        <button class="btn bc xs" onclick="showCustomerSessions('${c.phone}')">Sessions</button>
+      </div></td>
+    </tr>`
+  }).join('') || '<tr class="emp"><td colspan="7">No customers yet</td></tr>'
+}
+function fCust(v) { fCq=v; renderCustomers() }
+function showCustomerSessions(phone) {
+  fSq = phone; fSStat = ''
+  go('sessions', document.querySelector('[onclick*=sessions]'))
+}
+
+// ══════════════════════════════════════════════
+//  PAYMENTS
+// ══════════════════════════════════════════════
+function renderPayments() {
+  let l = PAYMENTS
+  if(fPq) l = l.filter(p => (p.phone+(p.mpesa_receipt||'')).toLowerCase().includes(fPq.toLowerCase()))
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(),now.getMonth(),now.getDate())
+  const monthStart = new Date(now.getFullYear(),now.getMonth(),1)
+  const tp = PAYMENTS.filter(p=>p.result_code===0&&new Date(p.created_at)>=todayStart)
+  const mp = PAYMENTS.filter(p=>p.result_code===0&&new Date(p.created_at)>=monthStart)
+  const ft = PAYMENTS.filter(p=>p.result_code!==0&&new Date(p.created_at)>=todayStart)
+  document.getElementById('p-today').textContent  = KSh(tp.reduce((s,p)=>s+Number(p.amount_ksh||0),0))
+  document.getElementById('p-month').textContent  = KSh(mp.reduce((s,p)=>s+Number(p.amount_ksh||0),0))
+  document.getElementById('p-cnt').textContent    = PAYMENTS.filter(p=>p.result_code===0).length
+  document.getElementById('p-fail').textContent   = ft.length
+  const tb = document.getElementById('pay-tb')
+  tb.innerHTML = l.map(p => {
+    const sess = SESSIONS.find(s=>s.checkout_request_id===p.checkout_request_id)
+    return `<tr>
+      <td class="mn dm">${fmtDT(p.created_at)}</td>
+      <td class="mn">${p.phone||'—'}</td>
+      <td class="mn" style="color:var(--cyan)">${sess?.ip_address||'—'}</td>
+      <td>${sess?.plan_name||'—'}</td>
+      <td class="mn" style="${p.result_code===0?'color:var(--green)':'color:var(--red)'}">${p.amount_ksh?KSh(p.amount_ksh):'—'}</td>
+      <td class="mn dm">${p.mpesa_receipt||'—'}</td>
+      <td><span class="bdg ${p.result_code===0?'bact':'bexp'}">${p.result_code===0?'Success':'Failed'}</span></td>
+    </tr>`
+  }).join('') || '<tr class="emp"><td colspan="7">No payments recorded</td></tr>'
+}
+function fPay(v) { fPq=v; renderPayments() }
+function exportPayCSV() {
+  const rows = [['Date','Phone','Plan','Amount KSh','Receipt','Result']]
+  PAYMENTS.forEach(p => rows.push([fmtDT(p.created_at),p.phone||'',SESSIONS.find(s=>s.checkout_request_id===p.checkout_request_id)?.plan_name||'',p.amount_ksh||'',p.mpesa_receipt||'',p.result_code===0?'Success':'Failed']))
+  const a=document.createElement('a'); a.href='data:text/csv,'+encodeURIComponent(rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n')); a.download='netbill-payments.csv'; a.click()
+}
+
+// ══════════════════════════════════════════════
+//  VOUCHERS
+// ══════════════════════════════════════════════
+function renderVouchers() {
+  let l = VOUCHERS
+  if(fVq)  l = l.filter(v=>(v.code+(v.batch_label||'')+(v.plan_name||'')).toLowerCase().includes(fVq.toLowerCase()))
+  if(fVSt) {
+    if(fVSt==='active')  l = l.filter(v=>v.is_active&&(!v.expires_at||new Date(v.expires_at)>new Date())&&v.uses<v.max_uses)
+    if(fVSt==='used')    l = l.filter(v=>v.uses>=v.max_uses)
+    if(fVSt==='expired') l = l.filter(v=>v.expires_at&&new Date(v.expires_at)<=new Date())
+  }
+  const tb = document.getElementById('v-tb')
+  tb.innerHTML = l.map(v => {
+    const exp  = v.expires_at && new Date(v.expires_at) < new Date()
+    const used = v.uses >= v.max_uses
+    const st   = exp?'Expired':used?'Used':v.is_active?'Active':'Inactive'
+    const scls = exp||used?'bexp':v.is_active?'bact':'bfail'
+    return `<tr>
+      <td class="mn" style="color:var(--amber);letter-spacing:2px;font-size:13px;font-weight:600">${v.code}</td>
+      <td>${v.plan_name||'—'}</td>
+      <td class="mn">${v.duration_hours < 24 ? v.duration_hours+'h' : v.duration_hours<168 ? (v.duration_hours/24).toFixed(0)+'d' : (v.duration_hours/168).toFixed(0)+'w'}</td>
+      <td class="mn" style="color:var(--green)">${v.price_ksh>0?KSh(v.price_ksh):'Free'}</td>
+      <td class="mn">${v.uses}/${v.max_uses}</td>
+      <td class="mn dm">${v.expires_at?fmtDT(v.expires_at):'—'}</td>
+      <td class="dm">${v.batch_label||'—'}</td>
+      <td><span class="bdg ${scls}">${st}</span></td>
+      <td><button class="btn br xs" onclick="deleteVoucher('${v.id}')">✕</button></td>
+    </tr>`
+  }).join('') || '<tr class="emp"><td colspan="9">No vouchers</td></tr>'
+}
+function fV(v) { fVq=v; renderVouchers() }
+function fVSt(v) { fVSt=v; renderVouchers() }
+async function genVouchers() {
+  const planId = document.getElementById('vg-plan').value
+  const qty    = parseInt(document.getElementById('vg-qty').value)||1
+  const price  = parseFloat(document.getElementById('vg-price').value)||0
+  const expDays= parseInt(document.getElementById('vg-exp').value)
+  const uses   = parseInt(document.getElementById('vg-uses').value)||1
+  const label  = document.getElementById('vg-label').value.trim()
+  if(!planId) { toast('Select a plan','e'); return }
+  const plan = PLANS.find(p=>p.id===planId)
+  const expiresAt = expDays ? new Date(Date.now()+expDays*864e5).toISOString() : null
+  const rows = Array.from({length:qty},()=>({
+    code:genCode(6), plan_id:planId, plan_name:plan?.name||'',
+    duration_hours:plan?.duration_hours||24, price_ksh:price,
+    batch_label:label, max_uses:uses, uses:0,
+    expires_at:expiresAt, is_active:true
+  }))
+  const {data,error} = await SB.from('vouchers').insert(rows).select()
+  if(error) { toast('Error: '+error.message,'e'); return }
+  VOUCHERS = [...(data||[]), ...VOUCHERS]
+  clM('m-vouch')
+  renderVouchers()
+  toast(`Generated ${qty} vouchers ✓`)
+}
+async function deleteVoucher(id) {
+  if(!confirm('Delete this voucher?')) return
+  await SB.from('vouchers').delete().eq('id',id)
+  VOUCHERS = VOUCHERS.filter(v=>v.id!==id)
+  renderVouchers()
+  toast('Deleted')
+}
+
+// ══════════════════════════════════════════════
+//  PLANS
+// ══════════════════════════════════════════════
+function renderPlans() {
+  const tb = document.getElementById('plan-tb')
+  const dur = h => h<24?h+'h':h<168?(h/24).toFixed(0)+'d':(h/168).toFixed(0)+'w'
+  tb.innerHTML = PLANS.map(p => {
+    const sess = SESSIONS.filter(s=>s.plan_id===p.id&&s.status!=='failed')
+    const rev  = PAYMENTS.filter(pay=>SESSIONS.some(s=>s.id===pay.session_id&&s.plan_id===p.id)&&pay.result_code===0).reduce((s,pay)=>s+Number(pay.amount_ksh||0),0)
+    return `<tr>
+      <td><strong>${p.name}</strong></td>
+      <td class="mn">${dur(p.duration_hours)}</td>
+      <td class="mn" style="color:var(--amber)">${KSh(p.price_ksh)}</td>
+      <td class="mn">${p.speed_down_mbps}Mbps</td>
+      <td class="mn">${p.speed_up_mbps}Mbps</td>
+      <td class="mn dm">${p.mikrotik_profile||'—'}</td>
+      <td class="mn">${sess.length}</td>
+      <td class="mn" style="color:var(--green)">${KSh(rev)}</td>
+      <td><span class="bdg ${p.is_active?'bact':'bfail'}">${p.is_active?'Active':'Off'}</span></td>
+      <td><div class="ar">
+        <button class="btn bs xs" onclick="editPlan('${p.id}')">Edit</button>
+        <button class="btn br xs" onclick="deletePlan('${p.id}')">✕</button>
+      </div></td>
+    </tr>`
+  }).join('') || '<tr class="emp"><td colspan="10">No plans. Add one to get started.</td></tr>'
+}
+function openAddPlan() { ePlanId=null; document.getElementById('m-plan-ttl').textContent='◈ Add Plan'; ['pl-name','pl-dur','pl-price','pl-sort','pl-dl','pl-ul','pl-mt'].forEach(id=>document.getElementById(id).value=''); document.getElementById('pl-dl').value=10; document.getElementById('pl-ul').value=5; document.getElementById('pl-active').checked=true; opM('m-plan') }
+function editPlan(id) {
+  const p = PLANS.find(x=>x.id===id); if(!p) return
+  ePlanId=id; document.getElementById('m-plan-ttl').textContent='✏ Edit Plan'
+  document.getElementById('pl-name').value  = p.name
+  document.getElementById('pl-dur').value   = p.duration_hours
+  document.getElementById('pl-price').value = p.price_ksh
+  document.getElementById('pl-sort').value  = p.sort_order||0
+  document.getElementById('pl-dl').value    = p.speed_down_mbps
+  document.getElementById('pl-ul').value    = p.speed_up_mbps
+  document.getElementById('pl-mt').value    = p.mikrotik_profile||''
+  document.getElementById('pl-active').checked = p.is_active
+  opM('m-plan')
+}
+async function savePlan() {
+  const name = document.getElementById('pl-name').value.trim()
+  const dur  = parseFloat(document.getElementById('pl-dur').value)
+  const price= parseFloat(document.getElementById('pl-price').value)
+  if(!name||isNaN(dur)||isNaN(price)) { toast('Name, duration and price required','e'); return }
+  const row = { name, duration_hours:dur, price_ksh:price, sort_order:parseInt(document.getElementById('pl-sort').value)||0, speed_down_mbps:parseInt(document.getElementById('pl-dl').value)||10, speed_up_mbps:parseInt(document.getElementById('pl-ul').value)||5, mikrotik_profile:document.getElementById('pl-mt').value.trim()||null, is_active:document.getElementById('pl-active').checked }
+  if(ePlanId) {
+    const {error} = await SB.from('plans').update(row).eq('id',ePlanId)
+    if(error) { toast('Error: '+error.message,'e'); return }
+    const i=PLANS.findIndex(x=>x.id===ePlanId); if(i>=0) PLANS[i]={...PLANS[i],...row}
+  } else {
+    const {data,error} = await SB.from('plans').insert(row).select().single()
+    if(error) { toast('Error: '+error.message,'e'); return }
+    PLANS.push(data)
+  }
+  clM('m-plan'); renderPlans(); fillPlanDDs()
+  toast(ePlanId?'Plan updated ✓':'Plan added ✓')
+}
+async function deletePlan(id) {
+  if(!confirm('Delete this plan?')) return
+  await SB.from('plans').delete().eq('id',id)
+  PLANS=PLANS.filter(p=>p.id!==id); renderPlans(); fillPlanDDs()
+  toast('Plan deleted')
+}
+
+// ══════════════════════════════════════════════
+//  MANUAL CONNECT
+// ══════════════════════════════════════════════
+async function manualConnect() {
+  const name  = document.getElementById('mc-name').value.trim() || 'Customer'
+  const phone = document.getElementById('mc-phone').value.trim()
+  const ip    = document.getElementById('mc-ip').value.trim()
+  const planId= document.getElementById('mc-plan').value
+  const amt   = parseFloat(document.getElementById('mc-amt').value)||0
+  const ref   = document.getElementById('mc-ref').value.trim()
+  if(!ip||!planId) { toast('IP and plan are required','e'); return }
+  const plan = PLANS.find(p=>p.id===planId)
+
+  // Create session in Supabase
+  const {data:sess,error} = await SB.from('sessions').insert({
+    customer_name:name, customer_phone:phone||'N/A', ip_address:ip,
+    plan_id:planId, plan_name:plan?.name||'', duration_hours:plan?.duration_hours||24,
+    amount_ksh:amt, mpesa_receipt:ref||'MANUAL', status:'pending'
+  }).select().single()
+  if(error) { toast('Error: '+error.message,'e'); return }
+
+  // Connect via edge function
+  try {
+    const r = await fetch(`${FN_URL}/connect-ip`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:sess.id}) })
+    const d = await r.json()
+    if(d.ok) { toast(`${ip} connected — ${plan?.name} ✓`); clM('m-connect'); await loadSessions() }
+    else toast('Error: '+(d.error||'failed'),'e')
+  } catch(e) { toast('Edge Function error: '+e.message,'e') }
+}
+
+// ══════════════════════════════════════════════
+//  REPORTS
+// ══════════════════════════════════════════════
+function renderReports() {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(),now.getMonth(),now.getDate())
+  const monthStart = new Date(now.getFullYear(),now.getMonth(),1)
+  const successPay = PAYMENTS.filter(p=>p.result_code===0)
+  const todayRev   = successPay.filter(p=>new Date(p.created_at)>=todayStart).reduce((s,p)=>s+Number(p.amount_ksh||0),0)
+  const monthRev   = successPay.filter(p=>new Date(p.created_at)>=monthStart).reduce((s,p)=>s+Number(p.amount_ksh||0),0)
+
+  document.getElementById('r-today').textContent    = KSh(todayRev)
+  document.getElementById('r-month').textContent    = KSh(monthRev)
+  document.getElementById('r-sessions').textContent = SESSIONS.length
+  document.getElementById('r-custs').textContent    = CUSTOMERS.length
+
+  // Revenue by plan
+  const planRev = {}
+  SESSIONS.forEach(s => { planRev[s.plan_name||'—'] = (planRev[s.plan_name||'—']||0) + Number(s.amount_ksh||0) })
+  const maxPR = Math.max(...Object.values(planRev),1)
+  const totalPR = Object.values(planRev).reduce((s,v)=>s+v,0)||1
+  document.getElementById('rpt-plans').innerHTML = Object.entries(planRev).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;flex:1">${n}</span>
+      <div style="width:80px;height:4px;background:var(--brd);border-radius:2px;overflow:hidden"><div style="height:100%;width:${(v/maxPR*100).toFixed(0)}%;background:var(--amber)"></div></div>
+      <span class="mn" style="font-size:10px;color:var(--amber)">${KSh(v)}</span>
+    </div>`).join('') || '<div class="dm" style="font-size:11px">No data</div>'
+
+  // Daily revenue this month
+  const daily = {}
+  successPay.filter(p=>new Date(p.created_at)>=monthStart).forEach(p => {
+    const dk = new Date(p.created_at).toLocaleDateString('en-KE',{timeZone:'Africa/Nairobi',month:'short',day:'2-digit'})
+    daily[dk] = (daily[dk]||0) + Number(p.amount_ksh||0)
+  })
+  const maxD = Math.max(...Object.values(daily),1)
+  document.getElementById('rpt-daily').innerHTML = Object.entries(daily).sort((a,b)=>new Date('1 '+a[0])-new Date('1 '+b[0])).map(([d,v])=>`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="mn dm" style="font-size:10px;width:60px">${d}</span>
+      <div style="flex:1;height:4px;background:var(--brd);border-radius:2px;overflow:hidden"><div style="height:100%;width:${(v/maxD*100).toFixed(0)}%;background:var(--cyan)"></div></div>
+      <span class="mn" style="font-size:10px;color:var(--cyan)">${KSh(v)}</span>
+    </div>`).join('') || '<div class="dm" style="font-size:11px">No data this month</div>'
+}
+
+// ══════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════
+function stab(name,el) {
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('on'))
+  document.querySelectorAll('.stc').forEach(t=>t.classList.remove('on'))
+  el.classList.add('on'); document.getElementById('st-'+name).classList.add('on')
+}
+function renderSettings() {
+  const f = {'s-sburl':'sb_url','s-sbkey':'sb_key','s-fnurl':'fn_url','s-isp':'isp_name','s-pb':'isp_pb','s-tel':'isp_tel'}
+  Object.entries(f).forEach(([id,k])=>{ const el=document.getElementById(id); if(el&&ls(k)) el.value=ls(k) })
+}
+function saveISP() {
+  const f = {'s-sburl':'sb_url','s-sbkey':'sb_key','s-fnurl':'fn_url','s-isp':'isp_name','s-pb':'isp_pb','s-tel':'isp_tel'}
+  Object.entries(f).forEach(([id,k])=>lss(k,document.getElementById(id).value))
+  FN_URL = ls('fn_url')
+  document.getElementById('sbname').textContent = ls('isp_name')||'NetBill Pro'
+  if(initSB()) { document.getElementById('setup').style.display='none'; loadAll() }
+  toast('Saved ✓')
+}
+async function testMT() {
+  const bar = document.getElementById('mt-testbar')
+  bar.textContent = 'Testing…'
+  try {
+    const r = await fetch(`${FN_URL}/ping`)
+    const d = await r.json()
+    if(d.mikrotik?.name) {
+      bar.textContent = '✅ MikroTik connected — ' + d.mikrotik.name
+      bar.style.background = 'rgba(34,197,94,.06)'
+      bar.style.borderColor = 'rgba(34,197,94,.2)'
+      document.getElementById('mt-dot').className = 'dot live'
+      document.getElementById('mt-tag').textContent = 'MikroTik: ✓ Online'
+      toast('MikroTik connected: '+d.mikrotik.name)
+    } else {
+      bar.textContent = '❌ MikroTik error: '+(d.mikrotik?.error||'no response')
+      toast('MikroTik error','e')
+    }
+  } catch(e) { bar.textContent = '❌ Error: '+e.message; toast(e.message,'e') }
+}
+
+// ══════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════
+;(function init() {
+  ;['su-url','su-key','su-fn','su-isp'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.value=ls(['sb_url','sb_key','fn_url','isp_name'][i]) })
+  FN_URL = ls('fn_url')
+  const isp = ls('isp_name'); if(isp) document.getElementById('sbname').textContent = isp
+  if(ls('fn_url')) document.getElementById('mt-tag').textContent = 'Edge Function: Set'
+  // Expose for nav onclick
+  window.openAddPlan = openAddPlan
+  if(initSB()) { document.getElementById('setup').style.display='none'; loadAll() }
+})()
+</script>
+</body>
+</html>
